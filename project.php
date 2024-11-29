@@ -157,87 +157,101 @@ $show_debug_alert_messages = false; // show which methods are being triggered (s
     <form method="POST" action="">
         <input type="hidden" name="searchDishesRequest">
         <p>Enter your search criteria:</p>
-        <!-- Condition 1 -->
-        Field:
-        <select name="field1">
-            <option value="price">Price</option>
-            <option value="name">Dish Name</option>
-            <option value="restaurant_name">Restaurant Name</option>
-        </select>
-        Operator:
-        <select name="operator1">
-            <option value="=">=</option>
-            <option value="<>"><></option>
-            <option value=">">></option>
-            <option value="<"><</option>
-            <option value=">=">>=</option>
-            <option value="<="><=</option>
-            <option value="LIKE">LIKE</option>
-        </select>
-        Value:
-        <input type="text" name="value1">
+        <div id="conditions">
+            <!-- Condition rows will be added here dynamically -->
+        </div>
+        <button type="button" onclick="addCondition()">Add Condition</button>
         <br /><br />
-
-        <!-- Logical Operator between Condition 1 and Condition 2 -->
-        Combine with:
-        <select name="logical1">
-            <option value="AND">AND</option>
-            <option value="OR">OR</option>
-        </select>
-        <br /><br />
-
-        <!-- Condition 2 -->
-        Field:
-        <select name="field2">
-            <option value="price">Price</option>
-            <option value="name">Dish Name</option>
-            <option value="restaurant_name">Restaurant Name</option>
-        </select>
-        Operator:
-        <select name="operator2">
-            <option value="=">=</option>
-            <option value="<>"><></option>
-            <option value=">">></option>
-            <option value="<"><</option>
-            <option value=">=">>=</option>
-            <option value="<="><=</option>
-            <option value="LIKE">LIKE</option>
-        </select>
-        Value:
-        <input type="text" name="value2">
-        <br /><br />
-
-        <!-- Logical Operator between Condition 2 and Condition 3 -->
-        Combine with:
-        <select name="logical2">
-            <option value="AND">AND</option>
-            <option value="OR">OR</option>
-        </select>
-        <br /><br />
-
-        <!-- Condition 3 -->
-        Field:
-        <select name="field3">
-            <option value="price">Price</option>
-            <option value="name">Dish Name</option>
-            <option value="restaurant_name">Restaurant Name</option>
-        </select>
-        Operator:
-        <select name="operator3">
-            <option value="=">=</option>
-            <option value="<>"><></option>
-            <option value=">">></option>
-            <option value="<"><</option>
-            <option value=">=">>=</option>
-            <option value="<="><=</option>
-            <option value="LIKE">LIKE</option>
-        </select>
-        Value:
-        <input type="text" name="value3">
-        <br /><br />
-
         <input type="submit" value="Search Dishes" name="searchDishesSubmit">
     </form>
+
+    <script>
+        let conditionCount = 0;
+
+        function addCondition() {
+            conditionCount++;
+
+            const conditionDiv = document.createElement('div');
+            conditionDiv.id = 'condition' + conditionCount;
+
+            let conditionHTML = '';
+
+            // Add 'Combine with' logical operator only if this is not the first condition
+            if (conditionCount > 1) {
+                conditionHTML += `
+                    Combine with:
+                    <select name="logical${conditionCount - 1}">
+                        <option value="AND">AND</option>
+                        <option value="OR">OR</option>
+                    </select>
+                    <br /><br />
+                `;
+            }
+
+            conditionHTML += `
+                <p>Condition ${conditionCount}:</p>
+                Field:
+                <select name="field${conditionCount}" onchange="updateOperators(${conditionCount})" id="field${conditionCount}">
+                    <option value="price">Price</option>
+                    <option value="name">Dish Name</option>
+                    <option value="restaurant_name">Restaurant Name</option>
+                </select>
+                Operator:
+                <select name="operator${conditionCount}" id="operator${conditionCount}">
+                    <!-- Operators will be populated based on field selection -->
+                </select>
+                Value:
+                <input type="text" name="value${conditionCount}">
+                <button type="button" onclick="removeCondition(${conditionCount})">Remove</button>
+                <hr />
+            `;
+
+            conditionDiv.innerHTML = conditionHTML;
+            document.getElementById('conditions').appendChild(conditionDiv);
+
+            // Initialize operators for the selected field
+            updateOperators(conditionCount);
+        }
+
+        function removeCondition(id) {
+            const conditionDiv = document.getElementById('condition' + id);
+            conditionDiv.parentNode.removeChild(conditionDiv);
+        }
+
+        function updateOperators(conditionIndex) {
+            const fieldSelect = document.getElementById(`field${conditionIndex}`);
+            const operatorSelect = document.getElementById(`operator${conditionIndex}`);
+            const selectedField = fieldSelect.value;
+
+            // Clear existing operators
+            operatorSelect.innerHTML = '';
+
+            // Define operator options for numeric and string fields
+            const numericOperators = ['=', '<>', '>', '<', '>=', '<='];
+            const stringOperators = ['='];
+
+            let operators = [];
+
+            if (selectedField === 'price') {
+                operators = numericOperators;
+            } else {
+                operators = stringOperators;
+            }
+
+            // Populate the operator dropdown
+            operators.forEach(op => {
+                const option = document.createElement('option');
+                option.value = op;
+                option.text = op;
+                operatorSelect.add(option);
+            });
+        }
+
+        // Automatically add the first condition when the page loads
+        window.onload = function() {
+            addCondition();
+        };
+    </script>
 
     <hr />
 
@@ -615,132 +629,93 @@ $show_debug_alert_messages = false; // show which methods are being triggered (s
         }
     }
 
-    // Function to handle searching for a restaurant
-    function handleSearchRestaurant()
-    {
-        if (connectToDB()) {
-            global $db_conn;
-    
-            $restaurantName = trim($_GET['restaurantName']);
-    
-            // Prepare and execute the query with a join to include owner name
-            $query = "SELECT R.name AS restaurant_name, R.rating, O.name AS owner_name
-                      FROM Restaurant R
-                      LEFT JOIN Owner O ON R.owner_ID = O.ID
-                      WHERE R.name = :restaurantName";
-            $statement = oci_parse($db_conn, $query);
-            oci_bind_by_name($statement, ":restaurantName", $restaurantName);
-    
-            if (oci_execute($statement)) {
-                $row = oci_fetch_assoc($statement);
-                if ($row) {
-                    // Display restaurant information in a table
-                    echo "<h3>Restaurant Information:</h3>";
-                    echo "<table border='1'>";
-                    echo "<tr><th>Name</th><th>Rating</th><th>Owner Name</th></tr>";
-                    echo "<tr>";
-                    echo "<td>" . htmlspecialchars($row['RESTAURANT_NAME']) . "</td>";
-                    echo "<td>" . htmlspecialchars($row['RATING']) . "</td>";
-                    echo "<td>" . htmlspecialchars($row['OWNER_NAME'] ?? 'N/A') . "</td>";
-                    echo "</tr>";
-                    echo "</table>";
-                } else {
-                    echo "<p>No information found for the restaurant: " . htmlspecialchars($restaurantName) . "</p>";
-                }
-            } else {
-                $e = oci_error($statement);
-                echo "<p>Error: " . htmlentities($e['message']) . "</p>";
-            }
-    
-            disconnectFromDB();
-        }
-    }
-    
-    // Function to handle searching for dishes based on criteria
     function handleSearchDishesRequest()
     {
         if (connectToDB()) {
             global $db_conn;
 
-            // Initialize arrays to hold conditions and parameters
+            // Set NLS Numeric Characters (if needed)
+            $nlsQuery = "ALTER SESSION SET NLS_NUMERIC_CHARACTERS = '. '";
+            $nlsStmt = oci_parse($db_conn, $nlsQuery);
+            oci_execute($nlsStmt);
+
+            // Dynamically build query based on user input
             $conditions = [];
-            $parameters = [];
+            $bindings = [];
 
-            // Loop through each condition (up to 3 in this example)
-            for ($i = 1; $i <= 3; $i++) {
-                // Check if the field, operator, and value are set for this condition
-                if (!empty($_POST["field$i"]) && !empty($_POST["operator$i"]) && isset($_POST["value$i"]) && $_POST["value$i"] !== '') {
-                    $field = $_POST["field$i"];
-                    $operator = $_POST["operator$i"];
-                    $value = $_POST["value$i"];
+            // Loop through the posted conditions
+            $conditionCount = 0;
+            foreach ($_POST as $key => $value) {
+                if (preg_match('/^field(\d+)$/', $key, $matches)) {
+                    $index = $matches[1];
+                    $field = $_POST["field$index"];
+                    $operator = $_POST["operator$index"];
+                    $conditionValue = $_POST["value$index"];
 
-                    // Validate the field and operator to prevent SQL injection
-                    $allowedFields = ['price', 'name', 'restaurant_name'];
-                    $allowedOperators = ['=', '<>', '>', '<', '>=', '<=', 'LIKE'];
+                    // Validate field and operator
+                    $validFields = ['price', 'name', 'restaurant_name'];
+                    $numericOperators = ['=', '<>', '>', '<', '>=', '<='];
+                    $stringOperators = ['='];
 
-                    if (!in_array($field, $allowedFields) || !in_array($operator, $allowedOperators)) {
-                        echo "<p>Error: Invalid field or operator in condition $i.</p>";
+                    if (!in_array($field, $validFields)) {
+                        echo "<p>Error: Invalid field selected.</p>";
                         disconnectFromDB();
                         return;
                     }
 
-                    // Prepare the condition and parameter placeholder
-                    $paramName = ":value$i";
-                    $conditions[] = "$field $operator $paramName";
-                    $parameters[$paramName] = $value;
+                    if ($field === 'price' && !in_array($operator, $numericOperators)) {
+                        echo "<p>Error: Invalid operator for numeric field.</p>";
+                        disconnectFromDB();
+                        return;
+                    } elseif ($field !== 'price' && !in_array($operator, $stringOperators)) {
+                        echo "<p>Error: Invalid operator for string field.</p>";
+                        disconnectFromDB();
+                        return;
+                    }
+
+                    // Add condition to query
+                    $placeholder = ":value$index";
+                    $conditions[] = "$field $operator $placeholder";
+                    $bindings[$placeholder] = $conditionValue;
                 }
             }
 
             // Combine conditions with logical operators
-            $query = "SELECT restaurant_name, name, price FROM Dishes";
-            if (count($conditions) > 0) {
-                $query .= " WHERE ";
-                // Add conditions and logical operators
-                for ($i = 0; $i < count($conditions); $i++) {
-                    $query .= $conditions[$i];
-                    if ($i < count($conditions) - 1) {
-                        // Add logical operator between conditions
-                        $logicalOperator = $_POST["logical" . ($i + 1)];
-                        if (!in_array($logicalOperator, ['AND', 'OR'])) {
-                            echo "<p>Error: Invalid logical operator.</p>";
-                            disconnectFromDB();
-                            return;
-                        }
-                        $query .= " $logicalOperator ";
-                    }
-                }
+            $query = "SELECT RESTAURANT_NAME, NAME, PRICE FROM Dishes";
+            if (!empty($conditions)) {
+                $query .= " WHERE " . implode(" AND ", $conditions);
             }
 
             // Prepare and execute the query
             $stmt = oci_parse($db_conn, $query);
-            // Bind parameters
-            foreach ($parameters as $param => $val) {
-                // For 'LIKE' operator, we may need to adjust the value
-                if (strpos($conditions[array_search($param, array_keys($parameters))], 'LIKE') !== false) {
-                    $val = "%$val%";
-                }
-                oci_bind_by_name($stmt, $param, $val);
+            foreach ($bindings as $placeholder => $value) {
+                oci_bind_by_name($stmt, $placeholder, $bindings[$placeholder]);
             }
 
-            if (oci_execute($stmt)) {
-                // Display the results
-                echo "<h3>Search Results:</h3>";
-                echo "<table border='1'>";
-                echo "<tr><th>Restaurant Name</th><th>Dish Name</th><th>Price</th></tr>";
-                $found = false;
-                while ($row = oci_fetch_assoc($stmt)) {
-                    $found = true;
-                    echo "<tr><td>" . htmlspecialchars($row['RESTAURANT_NAME']) . "</td><td>" . htmlspecialchars($row['NAME']) . "</td><td>" . htmlspecialchars($row['PRICE']) . "</td></tr>";
-                }
-                if (!$found) {
-                    echo "<tr><td colspan='3'>No dishes match your criteria.</td></tr>";
-                }
-                echo "</table>";
-            } else {
-                // Display an error message
+            if (!oci_execute($stmt)) {
                 $e = oci_error($stmt);
-                echo "<p>Error: " . htmlentities($e['message']) . "</p>";
+                echo "<p>Execute Error: " . htmlentities($e['message']) . "</p>";
+                disconnectFromDB();
+                return;
             }
+
+            // Display the results
+            echo "<h3>Search Results:</h3>";
+            echo "<table border='1'>";
+            echo "<tr><th>Restaurant Name</th><th>Dish Name</th><th>Price</th></tr>";
+            $found = false;
+            while ($row = oci_fetch_assoc($stmt)) {
+                $found = true;
+                echo "<tr>";
+                echo "<td>" . htmlspecialchars($row['RESTAURANT_NAME']) . "</td>";
+                echo "<td>" . htmlspecialchars($row['NAME']) . "</td>";
+                echo "<td>" . htmlspecialchars($row['PRICE']) . "</td>";
+                echo "</tr>";
+            }
+            if (!$found) {
+                echo "<tr><td colspan='3'>No dishes match your criteria.</td></tr>";
+            }
+            echo "</table>";
 
             disconnectFromDB();
         }
@@ -1022,7 +997,7 @@ $show_debug_alert_messages = false; // show which methods are being triggered (s
             } elseif (isset($_POST['searchDishesSubmit'])) {
                 handleSearchDishesRequest();
             } elseif (isset($_POST['projectionSubmit'])) {
-                    handleProjectionRequest();
+                handleProjectionRequest();
             } elseif (isset($_POST['aggregationSubmit'])) {
                 handleAggregationRequest();
             } elseif (isset($_POST['havingSubmit'])) {
