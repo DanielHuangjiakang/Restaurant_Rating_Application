@@ -1,17 +1,41 @@
+<!-- Test Oracle file for UBC CPSC304
+  Created by Jiemin Zhang
+  Modified by Simona Radu
+  Modified by Jessica Wong (2018-06-22)
+  Modified by Jason Hall (23-09-20)
+  This file shows the very basics of how to execute PHP commands on Oracle.
+  Specifically, it will drop a table, create a table, insert values update
+  values, and then query for values
+  IF YOU HAVE A TABLE CALLED "demoTable" IT WILL BE DESTROYED
+
+  The script assumes you already have a server set up All OCI commands are
+  commands to the Oracle libraries. To get the file to work, you must place it
+  somewhere where your Apache server can run it, and you must rename it to have
+  a ".php" extension. You must also change the username and password on the
+  oci_connect below to be your ORACLE username and password
+-->
+
 <?php
+// The preceding tag tells the web server to parse the following text as PHP
+// rather than HTML (the default)
+
 // Start the session
 session_start();
 
-// Database access configuration
-$config["dbuser"] = "ora_jhuang74"; // Replace with your CWL username
-$config["dbpassword"] = "a66382623"; // Replace with 'a' + your student number
-$config["dbserver"] = "dbhost.students.cs.ubc.ca:1522/stu";
-$db_conn = NULL; // Database connection handle
-
-// Debugging settings (optional)
+// The following 3 lines allow PHP errors to be displayed along with the page
+// content. Delete or comment out this block when it's no longer needed.
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+
+
+// Set some parameters
+
+// Database access configuration
+$config["dbuser"] = "ora_jhuang74"; // change "cwl" to your own CWL
+$config["dbpassword"] = "a66382623"; // change to 'a' + your student number
+$config["dbserver"] = "dbhost.students.cs.ubc.ca:1522/stu";
+$db_conn = NULL; // Database connection handle
 
 // Function to connect to the Oracle database
 function connectToDB() {
@@ -124,7 +148,7 @@ if (isset($_POST['insertSubmit'])) {
 </head>
 <body>
     <h2>User Login</h2>
-    <h4 class="centered-text">
+    <h4 class="centered-text" style="text-align: center;">
     If your username and age are already registered, use them to log in! Otherwise, create a new account by entering your username and age!
 </h4>
     <form method="POST" action="login.php">
@@ -135,4 +159,3 @@ if (isset($_POST['insertSubmit'])) {
     </form>
 </body>
 </html>
-
