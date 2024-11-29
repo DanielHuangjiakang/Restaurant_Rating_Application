@@ -138,7 +138,6 @@ $show_debug_alert_messages = false; // show which methods are being triggered (s
 
     <hr />
 
-
     <!-- Delete a Restaurant Section -->
     <h2>Delete a Restaurant</h2>
     <form method="POST" action="">
@@ -157,8 +156,86 @@ $show_debug_alert_messages = false; // show which methods are being triggered (s
     <h2>Search Dishes</h2>
     <form method="POST" action="">
         <input type="hidden" name="searchDishesRequest">
-        <p>Enter your search criteria (e.g., "price > 5 AND name LIKE '%Burger%'"):</p>
-        <input type="text" name="searchCriteria" required style="width: 400px;"> <br /><br />
+        <p>Enter your search criteria:</p>
+        <!-- Condition 1 -->
+        Field:
+        <select name="field1">
+            <option value="price">Price</option>
+            <option value="name">Dish Name</option>
+            <option value="restaurant_name">Restaurant Name</option>
+        </select>
+        Operator:
+        <select name="operator1">
+            <option value="=">=</option>
+            <option value="<>"><></option>
+            <option value=">">></option>
+            <option value="<"><</option>
+            <option value=">=">>=</option>
+            <option value="<="><=</option>
+            <option value="LIKE">LIKE</option>
+        </select>
+        Value:
+        <input type="text" name="value1">
+        <br /><br />
+
+        <!-- Logical Operator between Condition 1 and Condition 2 -->
+        Combine with:
+        <select name="logical1">
+            <option value="AND">AND</option>
+            <option value="OR">OR</option>
+        </select>
+        <br /><br />
+
+        <!-- Condition 2 -->
+        Field:
+        <select name="field2">
+            <option value="price">Price</option>
+            <option value="name">Dish Name</option>
+            <option value="restaurant_name">Restaurant Name</option>
+        </select>
+        Operator:
+        <select name="operator2">
+            <option value="=">=</option>
+            <option value="<>"><></option>
+            <option value=">">></option>
+            <option value="<"><</option>
+            <option value=">=">>=</option>
+            <option value="<="><=</option>
+            <option value="LIKE">LIKE</option>
+        </select>
+        Value:
+        <input type="text" name="value2">
+        <br /><br />
+
+        <!-- Logical Operator between Condition 2 and Condition 3 -->
+        Combine with:
+        <select name="logical2">
+            <option value="AND">AND</option>
+            <option value="OR">OR</option>
+        </select>
+        <br /><br />
+
+        <!-- Condition 3 -->
+        Field:
+        <select name="field3">
+            <option value="price">Price</option>
+            <option value="name">Dish Name</option>
+            <option value="restaurant_name">Restaurant Name</option>
+        </select>
+        Operator:
+        <select name="operator3">
+            <option value="=">=</option>
+            <option value="<>"><></option>
+            <option value=">">></option>
+            <option value="<"><</option>
+            <option value=">=">>=</option>
+            <option value="<="><=</option>
+            <option value="LIKE">LIKE</option>
+        </select>
+        Value:
+        <input type="text" name="value3">
+        <br /><br />
+
         <input type="submit" value="Search Dishes" name="searchDishesSubmit">
     </form>
 
@@ -568,41 +645,73 @@ $show_debug_alert_messages = false; // show which methods are being triggered (s
         if (connectToDB()) {
             global $db_conn;
 
-            // Get the search criteria
-            $searchCriteria = trim($_POST['searchCriteria']);
+            // Initialize arrays to hold conditions and parameters
+            $conditions = [];
+            $parameters = [];
 
-            // For security, only allow certain fields and operators
-            // Define allowed fields and operators
-            $allowedFields = ['price', 'name', 'restaurant_name'];
-            $allowedOperators = ['=', '>', '<', '>=', '<=', '<>', 'LIKE', 'AND', 'OR'];
+            // Loop through each condition (up to 3 in this example)
+            for ($i = 1; $i <= 3; $i++) {
+                // Check if the field, operator, and value are set for this condition
+                if (!empty($_POST["field$i"]) && !empty($_POST["operator$i"]) && isset($_POST["value$i"]) && $_POST["value$i"] !== '') {
+                    $field = $_POST["field$i"];
+                    $operator = $_POST["operator$i"];
+                    $value = $_POST["value$i"];
 
-            // Simple validation (this can be improved)
-            $isValid = true;
-            $tokens = preg_split('/\s+/', strtoupper($searchCriteria));
-            foreach ($tokens as $token) {
-                if (!in_array($token, $allowedFields) && !in_array($token, $allowedOperators) && !preg_match('/^[\'%].*[\'%]$/', $token) && !is_numeric($token)) {
-                    $isValid = false;
-                    break;
+                    // Validate the field and operator to prevent SQL injection
+                    $allowedFields = ['price', 'name', 'restaurant_name'];
+                    $allowedOperators = ['=', '<>', '>', '<', '>=', '<=', 'LIKE'];
+
+                    if (!in_array($field, $allowedFields) || !in_array($operator, $allowedOperators)) {
+                        echo "<p>Error: Invalid field or operator in condition $i.</p>";
+                        disconnectFromDB();
+                        return;
+                    }
+
+                    // Prepare the condition and parameter placeholder
+                    $paramName = ":value$i";
+                    $conditions[] = "$field $operator $paramName";
+                    $parameters[$paramName] = $value;
                 }
             }
 
-            if (!$isValid) {
-                echo "<p>Error: Invalid search criteria.</p>";
-                disconnectFromDB();
-                return;
+            // Combine conditions with logical operators
+            $query = "SELECT restaurant_name, name, price FROM Dishes";
+            if (count($conditions) > 0) {
+                $query .= " WHERE ";
+                // Add conditions and logical operators
+                for ($i = 0; $i < count($conditions); $i++) {
+                    $query .= $conditions[$i];
+                    if ($i < count($conditions) - 1) {
+                        // Add logical operator between conditions
+                        $logicalOperator = $_POST["logical" . ($i + 1)];
+                        if (!in_array($logicalOperator, ['AND', 'OR'])) {
+                            echo "<p>Error: Invalid logical operator.</p>";
+                            disconnectFromDB();
+                            return;
+                        }
+                        $query .= " $logicalOperator ";
+                    }
+                }
             }
 
-            // Build the query (this is still risky; in production, you should use parameterized queries)
-            $query = "SELECT restaurant_name, name, price FROM Dishes WHERE " . $searchCriteria;
-            $searchStmt = oci_parse($db_conn, $query);
+            // Prepare and execute the query
+            $stmt = oci_parse($db_conn, $query);
+            // Bind parameters
+            foreach ($parameters as $param => $val) {
+                // For 'LIKE' operator, we may need to adjust the value
+                if (strpos($conditions[array_search($param, array_keys($parameters))], 'LIKE') !== false) {
+                    $val = "%$val%";
+                }
+                oci_bind_by_name($stmt, $param, $val);
+            }
 
-            if (@oci_execute($searchStmt)) {
+            if (oci_execute($stmt)) {
                 // Display the results
                 echo "<h3>Search Results:</h3>";
                 echo "<table border='1'>";
                 echo "<tr><th>Restaurant Name</th><th>Dish Name</th><th>Price</th></tr>";
                 $found = false;
-                while ($row = oci_fetch_assoc($searchStmt)) {
+                while ($row = oci_fetch_assoc($stmt)) {
                     $found = true;
                     echo "<tr><td>" . htmlspecialchars($row['RESTAURANT_NAME']) . "</td><td>" . htmlspecialchars($row['NAME']) . "</td><td>" . htmlspecialchars($row['PRICE']) . "</td></tr>";
                 }
@@ -611,14 +720,15 @@ $show_debug_alert_messages = false; // show which methods are being triggered (s
                 }
                 echo "</table>";
             } else {
-                // Display an error message within the HTML
-                $e = oci_error($searchStmt);
-                echo "<p>Error: Invalid search criteria. " . htmlentities($e['message']) . "</p>";
+                // Display an error message
+                $e = oci_error($stmt);
+                echo "<p>Error: " . htmlentities($e['message']) . "</p>";
             }
 
             disconnectFromDB();
         }
     }
+
 
     function getAllRestaurantsWithOwners()
     {
