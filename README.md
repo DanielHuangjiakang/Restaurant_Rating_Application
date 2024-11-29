@@ -1,4 +1,4 @@
-# Restaurant Rating Application
+# Restaurant Rating Application(Tasty Ratings)
 
 ## Project Description
 
