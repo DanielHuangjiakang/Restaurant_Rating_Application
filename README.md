@@ -30,7 +30,7 @@ This application serves as a platform similar to Yelp or TripAdvisor, offering i
 - **Database**: Oracle SQL
 - **Backend**: PHP
 - **Frontend**: HTML, CSS, PHP
-- **Development Tools**: Node.js for deployment, PHP for backend scripting.
+- **Development Tools**: PHP for backend scripting.
 
 ---
 
