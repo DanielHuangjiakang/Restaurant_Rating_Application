@@ -241,6 +241,23 @@ $show_debug_alert_messages = false; // show which methods are being triggered (s
 
     <hr />
 
+    <hr />
+
+    <!-- View Employees Section -->
+    <h2>View Employee Details</h2>
+    <form method="POST" action="project.php">
+        <input type="hidden" id="projectionRequest" name="projectionRequest">
+        <p>Select attributes to display:</p>
+        <input type="checkbox" name="attributes[]" value="ID" checked>ID
+        <input type="checkbox" name="attributes[]" value="NAME" checked>Name
+        <input type="checkbox" name="attributes[]" value="HOURS_PER_WEEK">Hours Per Week
+        <input type="checkbox" name="attributes[]" value="HOURLY_WAGE">Hourly Wage
+        <br /><br />
+        <input type="submit" value="View Employees" name="projectionSubmit">
+    </form>
+
+    <hr />
+
     <!-- Find Chefs by Restaurant -->
     <h2>Find Chefs by Restaurant</h2>
     <form method="POST" action="">
@@ -729,6 +746,50 @@ $show_debug_alert_messages = false; // show which methods are being triggered (s
         }
     }
 
+    // Function to handle projection query (View Employees)
+    function handleProjectionRequest()
+    {
+        if (connectToDB()) {
+            global $db_conn;
+
+            // Get selected attributes
+            $attributes = isset($_POST['attributes']) ? $_POST['attributes'] : [];
+
+            if (count($attributes) == 0) {
+                echo "<p>Error: Please select at least one attribute.</p>";
+                disconnectFromDB();
+                return;
+            }
+
+            $attributesList = implode(", ", $attributes);
+
+            // Build and execute the query
+            $query = "SELECT $attributesList FROM Emp1";
+            $projectionStmt = oci_parse($db_conn, $query);
+            oci_execute($projectionStmt);
+
+            // Display the results
+            echo "<h3>Employee Details:</h3>";
+            echo "<table border='1'>";
+            echo "<tr>";
+            foreach ($attributes as $attr) {
+                echo "<th>$attr</th>";
+            }
+            echo "</tr>";
+
+            while ($row = oci_fetch_assoc($projectionStmt)) {
+                echo "<tr>";
+                foreach ($attributes as $attr) {
+                    echo "<td>" . $row[$attr] . "</td>";
+                }
+                echo "</tr>";
+            }
+            echo "</table>";
+
+            disconnectFromDB();
+        }
+    }
+
 
     function getAllRestaurantsWithOwners()
     {
@@ -960,6 +1021,8 @@ $show_debug_alert_messages = false; // show which methods are being triggered (s
                 handleDeleteRestaurant();
             } elseif (isset($_POST['searchDishesSubmit'])) {
                 handleSearchDishesRequest();
+            } elseif (isset($_POST['projectionSubmit'])) {
+                    handleProjectionRequest();
             } elseif (isset($_POST['aggregationSubmit'])) {
                 handleAggregationRequest();
             } elseif (isset($_POST['havingSubmit'])) {
