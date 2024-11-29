@@ -643,19 +643,18 @@ $show_debug_alert_messages = false; // show which methods are being triggered (s
             $conditions = [];
             $bindings = [];
 
-            // Loop through the posted conditions
-            $conditionCount = 0;
             foreach ($_POST as $key => $value) {
                 if (preg_match('/^field(\d+)$/', $key, $matches)) {
                     $index = $matches[1];
                     $field = $_POST["field$index"];
                     $operator = $_POST["operator$index"];
-                    $conditionValue = $_POST["value$index"];
+                    $value = $_POST["value$index"];
+                    $logical = $_POST["logical" . ($index - 1)] ?? null; // Get logical operator if exists
 
-                    // Validate field and operator
+                    // Validate field, operator, and logical operator
                     $validFields = ['price', 'name', 'restaurant_name'];
                     $numericOperators = ['=', '<>', '>', '<', '>=', '<='];
-                    $stringOperators = ['='];
+                    $stringOperators = ['=', 'LIKE'];
 
                     if (!in_array($field, $validFields)) {
                         echo "<p>Error: Invalid field selected.</p>";
@@ -673,17 +672,24 @@ $show_debug_alert_messages = false; // show which methods are being triggered (s
                         return;
                     }
 
-                    // Add condition to query
+                    // Build condition
                     $placeholder = ":value$index";
-                    $conditions[] = "$field $operator $placeholder";
-                    $bindings[$placeholder] = $conditionValue;
+                    $condition = "$field $operator $placeholder";
+
+                    // Add logical operator if it's not the first condition
+                    if ($logical && count($conditions) > 0) {
+                        $conditions[] = $logical;
+                    }
+
+                    $conditions[] = $condition;
+                    $bindings[$placeholder] = $value;
                 }
             }
 
-            // Combine conditions with logical operators
+            // Combine conditions into SQL query
             $query = "SELECT RESTAURANT_NAME, NAME, PRICE FROM Dishes";
             if (!empty($conditions)) {
-                $query .= " WHERE " . implode(" AND ", $conditions);
+                $query .= " WHERE " . implode(" ", $conditions); // Combine conditions with spaces for logical operators
             }
 
             // Prepare and execute the query
