@@ -124,7 +124,9 @@ if (isset($_POST['insertSubmit'])) {
 </head>
 <body>
     <h2>User Login</h2>
-    <h4>If your username and age are already registered, use them to log in! Otherwise, create a new account by entering your username and age!</h4>
+    <h4 class="centered-text">
+    If your username and age are already registered, use them to log in! Otherwise, create a new account by entering your username and age!
+</h4>
     <form method="POST" action="login.php">
         <input type="hidden" id="insertQueryRequest" name="insertQueryRequest">
         Username: <input type="text" name="insName" required> <br /><br />
@@ -133,3 +135,4 @@ if (isset($_POST['insertSubmit'])) {
     </form>
 </body>
 </html>
+

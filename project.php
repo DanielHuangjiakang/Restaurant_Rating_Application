@@ -206,33 +206,110 @@ function handleAddRestaurant()
     }
 }
 
-// Function to handle updating a restaurant's rating
+// // Function to handle updating a restaurant's rating
+// function handleUpdateRestaurantRating()
+// {
+//     if (connectToDB()) {
+//         global $db_conn;
+
+//         $restaurantName = $_POST['restaurantToUpdate'];
+//         $newRating = floatval($_POST['newRating']);
+
+//         // Update the rating
+//         $updateRestaurantQuery = "UPDATE Restaurant SET rating = :newRating WHERE name = :restaurantName";
+//         $updateRestaurantStmt = oci_parse($db_conn, $updateRestaurantQuery);
+//         oci_bind_by_name($updateRestaurantStmt, ":newRating", $newRating);
+//         oci_bind_by_name($updateRestaurantStmt, ":restaurantName", $restaurantName);
+
+//         if (oci_execute($updateRestaurantStmt, OCI_DEFAULT)) {
+//             oci_commit($db_conn);
+//             echo "<p>Rating of '$restaurantName' updated successfully!</p>";
+//         } else {
+//             oci_rollback($db_conn);
+//             $e = oci_error($updateRestaurantStmt);
+//             echo "<p>Error: Unable to update restaurant rating. " . htmlentities($e['message']) . "</p>";
+//         }
+
+//         disconnectFromDB();
+//     }
+// }
+
 function handleUpdateRestaurantRating()
 {
     if (connectToDB()) {
         global $db_conn;
 
-        $restaurantName = $_POST['restaurantToUpdate'];
-        $newRating = floatval($_POST['newRating']);
+        $restaurantName = trim($_POST['restaurantToUpdate']);
+        $newRating = isset($_POST['newRating']) && $_POST['newRating'] !== '' ? floatval($_POST['newRating']) : null;
+        $newOwnerName = trim($_POST['newOwnerName']);
 
-        // Update the rating
-        $updateRestaurantQuery = "UPDATE Restaurant SET rating = :newRating WHERE name = :restaurantName";
-        $updateRestaurantStmt = oci_parse($db_conn, $updateRestaurantQuery);
-        oci_bind_by_name($updateRestaurantStmt, ":newRating", $newRating);
-        oci_bind_by_name($updateRestaurantStmt, ":restaurantName", $restaurantName);
+        if (!is_null($newRating)) {
+            $updateRatingQuery = "UPDATE Restaurant SET rating = :newRating WHERE name = :restaurantName";
+            $updateRatingStmt = oci_parse($db_conn, $updateRatingQuery);
+            oci_bind_by_name($updateRatingStmt, ":newRating", $newRating);
+            oci_bind_by_name($updateRatingStmt, ":restaurantName", $restaurantName);
 
-        if (oci_execute($updateRestaurantStmt, OCI_DEFAULT)) {
-            oci_commit($db_conn);
-            echo "<p>Rating of '$restaurantName' updated successfully!</p>";
-        } else {
-            oci_rollback($db_conn);
-            $e = oci_error($updateRestaurantStmt);
-            echo "<p>Error: Unable to update restaurant rating. " . htmlentities($e['message']) . "</p>";
+            if (!oci_execute($updateRatingStmt, OCI_DEFAULT)) {
+                oci_rollback($db_conn);
+                $e = oci_error($updateRatingStmt);
+                echo "<p>Error: Unable to update restaurant rating. " . htmlentities($e['message']) . "</p>";
+                disconnectFromDB();
+                return;
+            }
         }
+
+        if (!empty($newOwnerName)) {
+            $getOwnerIdQuery = "SELECT ID FROM Owner WHERE name = :ownerName";
+            $getOwnerIdStmt = oci_parse($db_conn, $getOwnerIdQuery);
+            oci_bind_by_name($getOwnerIdStmt, ":ownerName", $newOwnerName);
+            oci_execute($getOwnerIdStmt);
+            $ownerRow = oci_fetch_assoc($getOwnerIdStmt);
+
+            if ($ownerRow) {
+                $ownerId = $ownerRow['ID'];
+            } else {
+                $newOwnerIdQuery = "SELECT NVL(MAX(ID), 0) + 1 AS new_id FROM Owner";
+                $newOwnerIdStmt = oci_parse($db_conn, $newOwnerIdQuery);
+                oci_execute($newOwnerIdStmt);
+                $newIdRow = oci_fetch_assoc($newOwnerIdStmt);
+                $ownerId = $newIdRow['NEW_ID'];
+
+                $insertOwnerQuery = "INSERT INTO Owner (ID, name) VALUES (:id, :name)";
+                $insertOwnerStmt = oci_parse($db_conn, $insertOwnerQuery);
+                oci_bind_by_name($insertOwnerStmt, ":id", $ownerId);
+                oci_bind_by_name($insertOwnerStmt, ":name", $newOwnerName);
+
+                if (!oci_execute($insertOwnerStmt, OCI_DEFAULT)) {
+                    oci_rollback($db_conn);
+                    $e = oci_error($insertOwnerStmt);
+                    echo "<p>Error: Unable to create new owner. " . htmlentities($e['message']) . "</p>";
+                    disconnectFromDB();
+                    return;
+                }
+            }
+
+            $updateOwnerQuery = "UPDATE Restaurant SET owner_ID = :ownerId WHERE name = :restaurantName";
+            $updateOwnerStmt = oci_parse($db_conn, $updateOwnerQuery);
+            oci_bind_by_name($updateOwnerStmt, ":ownerId", $ownerId);
+            oci_bind_by_name($updateOwnerStmt, ":restaurantName", $restaurantName);
+
+            if (!oci_execute($updateOwnerStmt, OCI_DEFAULT)) {
+                oci_rollback($db_conn);
+                $e = oci_error($updateOwnerStmt);
+                echo "<p>Error: Unable to update restaurant owner. " . htmlentities($e['message']) . "</p>";
+                disconnectFromDB();
+                return;
+            }
+        }
+
+        oci_commit($db_conn);
+        echo "<p>Info for '$restaurantName' updated successfully!</p>";
 
         disconnectFromDB();
     }
 }
+
+
 
 // Function to handle deleting a restaurant
 function handleDeleteRestaurant()
@@ -350,6 +427,36 @@ function handleSearchDishesRequest()
         disconnectFromDB();
     }
 }
+
+function getAllRestaurantsWithOwners()
+{
+    if (connectToDB()) {
+        global $db_conn;
+
+        // Query to fetch all restaurants along with owner names
+        $query = "SELECT R.name AS restaurant_name, O.name AS owner_name, R.rating
+                  FROM Restaurant R
+                  LEFT JOIN Owner O ON R.owner_ID = O.ID";
+        $stmt = oci_parse($db_conn, $query);
+        oci_execute($stmt);
+
+        // Display results in a table
+        echo "<h3>All Restaurants with Owners:</h3>";
+        echo "<table border='1'>";
+        echo "<tr><th>Restaurant Name</th><th>Owner Name</th><th>Rating</th></tr>";
+        while ($row = oci_fetch_assoc($stmt)) {
+            echo "<tr>";
+            echo "<td>" . htmlspecialchars($row['RESTAURANT_NAME']) . "</td>";
+            echo "<td>" . htmlspecialchars($row['OWNER_NAME']) . "</td>";
+            echo "<td>" . htmlspecialchars($row['RATING']) . "</td>";
+            echo "</tr>";
+        }
+        echo "</table>";
+
+        disconnectFromDB();
+    }
+}
+
 
 // Function to handle viewing all restaurants
 function displayAllRestaurants()
@@ -578,20 +685,45 @@ handleRequest();
 
     <hr />
 
-    <!-- Update Restaurant Rating Section -->
-    <h2>Update Restaurant Rating</h2>
+    <!-- Update Restaurant Details Section -->
+    <h2>Update Restaurant Details</h2>
+
+    <?php
+    $restaurants = getAllRestaurantsWithOwners();
+    if (!empty($restaurants)) {
+        echo "<table border='1'>";
+        echo "<tr><th>Restaurant Name</th><th>Owner Name</th><th>Rating</th></tr>";
+        foreach ($restaurants as $restaurant) {
+            echo "<tr>";
+            echo "<td>" . htmlspecialchars($restaurant['restaurant_name']) . "</td>";
+            echo "<td>" . htmlspecialchars($restaurant['owner_name']) . "</td>";
+            echo "<td>" . htmlspecialchars($restaurant['rating']) . "</td>";
+            echo "</tr>";
+        }
+        echo "</table><br />";
+    } else {
+        echo "<p>No restaurants available to update.</p>";
+    }
+    ?>
+
     <form method="POST" action="">
         <input type="hidden" name="updateRestaurantRequest">
-        <p>Select the restaurant to update:</p>
+        <p>Select the Restaurant to Update:</p>
         <select name="restaurantToUpdate" required>
             <?php echo getRestaurantOptions(); ?>
         </select>
         <br /><br />
-        New Rating (0-5): <input type="number" name="newRating" min="0" max="5" step="0.1" required> <br /><br />
-        <input type="submit" value="Update Rating" name="updateRestaurantSubmit">
+        Enter New Owner Name (leave blank if no change):
+        <input type="text" name="newOwnerName" placeholder="Enter new owner name">
+        <br /><br />
+        Enter New Rating (leave blank if no change):
+        <input type="number" name="newRating" min="0" max="5" step="0.1" placeholder="Enter new rating">
+        <br /><br />
+        <input type="submit" value="Update Restaurant" name="updateRestaurantSubmit">
     </form>
 
     <hr />
+
 
     <!-- Delete a Restaurant Section -->
     <h2>Delete a Restaurant</h2>
