@@ -984,6 +984,46 @@ $show_debug_alert_messages = false; // show which methods are being triggered (s
         }
     }
 
+    function handleSearchRestaurant()
+    {
+        if (connectToDB()) {
+            global $db_conn;
+    
+            $restaurantName = trim($_GET['restaurantName']);
+    
+            // Prepare and execute the query with a join to include owner name
+            $query = "SELECT R.name AS restaurant_name, R.rating, O.name AS owner_name
+                      FROM Restaurant R
+                      LEFT JOIN Owner O ON R.owner_ID = O.ID
+                      WHERE R.name = :restaurantName";
+            $statement = oci_parse($db_conn, $query);
+            oci_bind_by_name($statement, ":restaurantName", $restaurantName);
+    
+            if (oci_execute($statement)) {
+                $row = oci_fetch_assoc($statement);
+                if ($row) {
+                    // Display restaurant information in a table
+                    echo "<h3>Restaurant Information:</h3>";
+                    echo "<table border='1'>";
+                    echo "<tr><th>Name</th><th>Rating</th><th>Owner Name</th></tr>";
+                    echo "<tr>";
+                    echo "<td>" . htmlspecialchars($row['RESTAURANT_NAME']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['RATING']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['OWNER_NAME'] ?? 'N/A') . "</td>";
+                    echo "</tr>";
+                    echo "</table>";
+                } else {
+                    echo "<p>No information found for the restaurant: " . htmlspecialchars($restaurantName) . "</p>";
+                }
+            } else {
+                $e = oci_error($statement);
+                echo "<p>Error: " . htmlentities($e['message']) . "</p>";
+            }
+    
+            disconnectFromDB();
+        }
+    }
+
     // Function to handle form submissions
     function handleRequest()
     {
