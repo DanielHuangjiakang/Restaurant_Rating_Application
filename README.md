@@ -15,9 +15,8 @@ This application serves as a platform similar to Yelp or TripAdvisor, offering i
 ## Explore Our Interactive Interface
 
 <p align="center">
-  <img src="img/rb_intro.png" alt="Intro" width="30%">
-  <img src="img/rb_map_selection.png" alt="Map Selection" width="30%">
-  <img src="img/rb_tutorial.png" alt="Tutorial" width="30%">
+  <img src="img/login.png" alt="Intro" width="45%">
+  <img src="img/ratingApp.png" alt="Map Selection" width="45%">
 </p>
 
 
