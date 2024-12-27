@@ -12,6 +12,10 @@ This application serves as a platform similar to Yelp or TripAdvisor, offering i
 
 ---
 
+## Explore Our Interactive Interface
+
+
+---
 ## Features
 
 - Post reviews, ratings, and photos for restaurants and dishes.
